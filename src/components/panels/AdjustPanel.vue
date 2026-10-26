@@ -16,6 +16,7 @@ const center = () => Object.assign(scene.subject, { x: 0.5, y: 0.5 })
 
 <template>
   <h3>Retouche</h3>
+  <SliderField v-model="scene.cutoutLevel" label="Netteté du détourage" :min="0" :max="100" />
   <SliderField v-for="slider in sliders" :key="slider.key" v-model="scene.subject[slider.key]" v-bind="slider" />
   <div class="actions">
     <button class="btn btn-ghost" @click="scene.subject.flip = !scene.subject.flip">Miroir</button>

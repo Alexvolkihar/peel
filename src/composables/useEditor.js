@@ -1,7 +1,8 @@
-import { reactive, ref, shallowRef, computed } from 'vue'
+import { reactive, ref, shallowRef, computed, watch } from 'vue'
 import { removeBackground } from '@imgly/background-removal'
-import { SIZES, EXPORT_FORMATS, createScene } from '../config'
-import { cropToSubject, downloadBlob, loadImage, loadImageFromFile } from '../lib/image'
+import { SIZES, EXPORT_FORMATS, CUTOUT_MAX_SIDE, createScene } from '../config'
+import { cropToSubject, downloadBlob, loadImage, loadImageFromFile, toCanvas } from '../lib/image'
+import { refineMask } from '../lib/refine'
 import { paintScene } from '../lib/render'
 
 // Module-level state: a single editor session, no store library needed.
@@ -10,7 +11,7 @@ const fileName = ref('image')
 const errorMessage = ref('')
 const progress = reactive({ ratio: 0, label: '' })
 const scene = reactive(createScene())
-const assets = shallowRef({ original: null, cutout: null, bgImage: null })
+const assets = shallowRef({ original: null, rawCutout: null, cutout: null, bgImage: null })
 
 const dimensions = computed(() => {
   const { w, h } = SIZES.find((size) => size.id === scene.size)
@@ -27,6 +28,8 @@ function trackProgress(key, current, total) {
   progress.label = key.startsWith('fetch') ? 'Téléchargement du modèle (une seule fois)…' : 'Détourage en cours…'
 }
 
+const refineSubject = (rawCutout) => cropToSubject(refineMask(rawCutout, scene.cutoutLevel))
+
 async function importFile(file) {
   if (!file?.type.startsWith('image/')) return
   errorMessage.value = ''
@@ -38,9 +41,9 @@ async function importFile(file) {
   try {
     const original = await loadImageFromFile(file)
     const cutBlob = await removeBackground(file, { progress: trackProgress })
-    const cutout = cropToSubject(await loadImage(URL.createObjectURL(cutBlob)))
+    const rawCutout = toCanvas(await loadImage(URL.createObjectURL(cutBlob)), CUTOUT_MAX_SIDE)
     Object.assign(scene, createScene())
-    assets.value = { original, cutout, bgImage: null }
+    assets.value = { original, rawCutout, cutout: refineSubject(rawCutout), bgImage: null }
     stage.value = 'editor'
   } catch (error) {
     console.error(error)
@@ -65,8 +68,12 @@ function exportImage(format) {
 
 function reset() {
   stage.value = 'home'
-  assets.value = { original: null, cutout: null, bgImage: null }
+  assets.value = { original: null, rawCutout: null, cutout: null, bgImage: null }
 }
+
+watch(() => scene.cutoutLevel, () => {
+  if (assets.value.rawCutout) setAssets({ cutout: refineSubject(assets.value.rawCutout) })
+})
 
 export function useEditor() {
   return { stage, fileName, errorMessage, progress, scene, assets, dimensions, importFile, setBackgroundImage, exportImage, reset }

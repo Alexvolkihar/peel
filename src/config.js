@@ -43,8 +43,11 @@ export const TABS = [
 
 export const BASE_DIMENSION = 1080
 
+export const CUTOUT_MAX_SIDE = 2048
+
 export const createScene = () => ({
   size: 'square',
+  cutoutLevel: 50,
   bg: { kind: 'none', color: '#ffffff', gradient: GRADIENTS[0], blur: 24 },
   subject: { x: 0.5, y: 0.5, scale: 0.8, rotate: 0, flip: false, brightness: 100, contrast: 100, saturate: 100 },
   shadow: { kind: 'none', opacity: 0.35, blur: 40, offset: 24 },

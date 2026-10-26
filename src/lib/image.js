@@ -11,18 +11,27 @@ export function loadImage(src) {
 
 export const loadImageFromFile = (file) => loadImage(URL.createObjectURL(file))
 
-function createCanvas(width, height) {
+export function createCanvas(width, height) {
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height
   return canvas
 }
 
+/** Copies an image into a canvas, downscaled so its longest side is at most `maxSide`. */
+export function toCanvas(img, maxSide = Infinity) {
+  const width = img.naturalWidth ?? img.width
+  const height = img.naturalHeight ?? img.height
+  const ratio = Math.min(1, maxSide / Math.max(width, height))
+  const canvas = createCanvas(Math.round(width * ratio), Math.round(height * ratio))
+  canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+  return canvas
+}
+
 /** Crops a transparent-background image to the bounding box of its visible pixels. */
 export function cropToSubject(img) {
-  const source = createCanvas(img.naturalWidth, img.naturalHeight)
+  const source = toCanvas(img)
   const ctx = source.getContext('2d', { willReadFrequently: true })
-  ctx.drawImage(img, 0, 0)
   const { data, width, height } = ctx.getImageData(0, 0, source.width, source.height)
 
   let minX = width, minY = height, maxX = -1, maxY = -1
