@@ -1,4 +1,4 @@
-# Plan : lancement d'Atelier (21 s, 1920×1080, 30 fps, 120 BPM)
+# Plan : lancement de Peel (21 s, 1920×1080, 30 fps, 120 BPM)
 
 **Angle** : un éditeur photo façon Photoroom, gratuit, local, sans compte. Tout est montré avec la vraie interface, sur une photo libre Unsplash.
 **Hook (0–3 s)** : « Le fond ? Disparu. » en grand, sur fond sable avec surlignage jaune.

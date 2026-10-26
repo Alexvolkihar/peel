@@ -1,1 +1,1 @@
-Atelier : un éditeur photo façon Photoroom qui détoure ton produit, le pose sur un podium et l'exporte en image ou en vidéo. Tout tourne dans ton navigateur : pas de compte, aucun envoi de photo.
+Peel : un éditeur photo façon Photoroom qui détoure ton produit, le pose sur un podium et l'exporte en image ou en vidéo. Tout tourne dans ton navigateur : pas de compte, aucun envoi de photo.

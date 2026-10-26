@@ -120,7 +120,7 @@ async function exportBatch(files, format) {
       entries[key in entries ? `${base}-${batch.done + 1}.${EXPORT_FORMATS[format].ext}` : key] = new Uint8Array(await blob.arrayBuffer())
       batch.done++
     }
-    downloadBlob(new Blob([zipSync(entries, { level: 0 })], { type: 'application/zip' }), 'lot-atelier.zip')
+    downloadBlob(new Blob([zipSync(entries, { level: 0 })], { type: 'application/zip' }), 'peel-lot.zip')
   } finally {
     batch.running = false
   }

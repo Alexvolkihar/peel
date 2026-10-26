@@ -8,11 +8,11 @@ const { stage, fileName, importFile, reset } = useEditor()
 <template>
   <header class="nav" :class="{ compact: stage === 'editor' }">
     <div class="inner">
-      <a class="brand" href="#" aria-label="Atelier, retour à l’accueil" @click.prevent="reset">
+      <a class="brand" href="#" aria-label="Peel, retour à l’accueil" @click.prevent="reset">
         <span class="logo" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20V5h6a4 4 0 0 1 0 8H7M12 13l5 7" /></svg>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20V5h6a4 4 0 0 1 0 8H7" /></svg>
         </span>
-        <span class="name">Atelier</span>
+        <span class="name">Peel</span>
       </a>
 
       <template v-if="stage === 'editor'">
