@@ -1,5 +1,7 @@
 # Atelier
 
+[![CI](https://github.com/Alexvolkihar/photoroom-perso/actions/workflows/ci.yml/badge.svg)](https://github.com/Alexvolkihar/photoroom-perso/actions/workflows/ci.yml)
+
 Un éditeur photo façon [Photoroom](https://www.photoroom.com), **gratuit, local et sans compte**. Détoure un produit, pose-le sur un podium, une couleur ou un dégradé, ajoute une ombre, puis exporte en image, en vidéo ou par lots. Tes photos ne quittent jamais ton navigateur.
 
 [![Démo d'Atelier](docs/demo/demo.gif)](docs/demo/demo.mp4)
