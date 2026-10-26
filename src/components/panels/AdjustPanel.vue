@@ -4,11 +4,11 @@ import SliderField from '../SliderField.vue'
 
 const { scene } = useEditor()
 const sliders = [
-  { key: 'scale', label: 'Taille', min: 0.1, max: 2, step: 0.01 },
-  { key: 'rotate', label: 'Rotation', min: -180, max: 180 },
-  { key: 'brightness', label: 'Luminosité', min: 50, max: 150 },
-  { key: 'contrast', label: 'Contraste', min: 50, max: 150 },
-  { key: 'saturate', label: 'Saturation', min: 0, max: 200 },
+  { key: 'scale', label: 'Taille', min: 0.1, max: 2, step: 0.01, format: (v) => `${Math.round(v * 100)} %` },
+  { key: 'rotate', label: 'Rotation', min: -180, max: 180, format: (v) => `${v}°` },
+  { key: 'brightness', label: 'Luminosité', min: 50, max: 150, format: (v) => `${v} %` },
+  { key: 'contrast', label: 'Contraste', min: 50, max: 150, format: (v) => `${v} %` },
+  { key: 'saturate', label: 'Saturation', min: 0, max: 200, format: (v) => `${v} %` },
 ]
 
 const center = () => Object.assign(scene.subject, { x: 0.5, y: 0.5 })

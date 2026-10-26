@@ -45,3 +45,18 @@ input { font: inherit; }
 .btn-ghost:hover { background: var(--n100); }
 .btn-lg { height: 56px; padding: 0 32px; font-size: 17px; }
 .btn[disabled] { opacity: .5; pointer-events: none; }
+
+/* ---- browser surfaces themed from the palette ---- */
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+::selection { background: var(--lilac); color: var(--black); }
+* { scrollbar-width: thin; scrollbar-color: var(--n300) transparent; }
+input[type='range'] { accent-color: var(--blue); }
+output, .tabular { font-variant-numeric: tabular-nums; }
+button:disabled, .btn[disabled] { opacity: .45; cursor: not-allowed; }
+.btn-blue:hover { box-shadow: 0 6px 18px rgba(73, 47, 251, .3); }
+.btn-black:hover { box-shadow: 0 6px 18px rgba(15, 16, 17, .22); }
+.btn:focus-within { outline: 2px solid var(--blue); outline-offset: 2px; } /* file-picker labels */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

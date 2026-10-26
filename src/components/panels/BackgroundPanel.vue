@@ -37,7 +37,7 @@ const { scene, setBackgroundImage } = useEditor()
     <button v-for="item in SCENES" :key="item.id" :class="{ on: scene.bg.scene === item.id }" @click="scene.bg.scene = item.id">{{ item.label }}</button>
   </div>
 
-  <SliderField v-else-if="scene.bg.kind === 'blur'" v-model="scene.bg.blur" label="Intensité du flou" :min="2" :max="80" />
+  <SliderField v-else-if="scene.bg.kind === 'blur'" v-model="scene.bg.blur" label="Intensité du flou" :min="2" :max="80" :format="(v) => `${v} px`" />
 
   <label v-else-if="scene.bg.kind === 'image'" class="btn btn-ghost full">
     Choisir une image

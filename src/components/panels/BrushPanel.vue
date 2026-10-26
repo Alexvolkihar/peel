@@ -14,8 +14,8 @@ const { brush, undoBrush, redoBrush, resetBrushEdits } = useEditor()
 <template>
   <h3>Pinceau</h3>
   <ChipGroup v-model="brush.mode" :options="MODES" />
-  <SliderField v-model="brush.size" label="Taille" :min="4" :max="80" />
-  <SliderField v-model="brush.softness" label="Douceur du bord" :min="0" :max="100" />
+  <SliderField v-model="brush.size" label="Taille" :min="4" :max="80" :format="(v) => `${v} px`" />
+  <SliderField v-model="brush.softness" label="Douceur du bord" :min="0" :max="100" :format="(v) => `${v} %`" />
   <p class="hint">
     <b>Gommer</b> retire ce que tu peins. <b>Restaurer</b> ramène la photo d’origine, même là où le détourage l’avait supprimée.
   </p>

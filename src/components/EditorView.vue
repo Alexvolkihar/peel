@@ -45,20 +45,22 @@ watch([scene, assets], render, { deep: true })
 
 <template>
   <main class="editor">
-    <aside class="rail">
-      <button v-for="tab in TABS" :key="tab.id" :class="{ on: activeTab === tab.id }" @click="activeTab = tab.id">
+    <div class="rail" role="tablist" aria-label="Outils" aria-orientation="vertical">
+      <button v-for="tab in TABS" :key="tab.id" role="tab" :aria-selected="activeTab === tab.id" :class="{ on: activeTab === tab.id }" @click="activeTab = tab.id">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path :d="tab.icon" /></svg>
         <span>{{ tab.label }}</span>
       </button>
-    </aside>
+    </div>
 
-    <section class="panel"><component :is="PANELS[activeTab]" /></section>
+    <section class="panel" role="tabpanel">
+      <Transition name="swap" mode="out-in"><div :key="activeTab"><component :is="PANELS[activeTab]" /></div></Transition>
+    </section>
 
     <section class="work">
       <div class="board" :style="{ aspectRatio: `${dimensions.width}/${dimensions.height}` }">
-        <canvas ref="canvas" :class="{ brushing: activeTab === 'brush' }" v-bind="handlers" />
-        <i v-if="activeTab === 'brush' && ring" class="ring" :style="{ left: `${ring.x}px`, top: `${ring.y}px`, width: `${brush.size * 2}px`, height: `${brush.size * 2}px` }" />
-        <div v-if="busy" class="busy">
+        <canvas ref="canvas" role="img" aria-label="Aperçu de l’image" :class="{ brushing: activeTab === 'brush' }" v-bind="handlers" />
+        <i v-if="activeTab === 'brush' && ring" class="ring" aria-hidden="true" :style="{ left: `${ring.x}px`, top: `${ring.y}px`, width: `${brush.size * 2}px`, height: `${brush.size * 2}px` }" />
+        <div v-if="busy" class="busy" role="status" aria-live="polite">
           <div class="spinner" />
           <p>{{ progress.label }} <template v-if="progress.ratio">{{ Math.round(progress.ratio * 100) }} %</template></p>
         </div>
@@ -69,9 +71,9 @@ watch([scene, assets], render, { deep: true })
 </template>
 
 <style scoped>
-.editor { display: grid; grid-template-columns: 88px 300px 1fr; height: calc(100vh - 64px); background: var(--sand); }
+.editor { display: grid; grid-template-columns: 92px 300px 1fr; height: calc(100vh - 64px); background: var(--sand); }
 .rail { display: flex; flex-direction: column; gap: 6px; padding: 12px 8px; border-right: 1px solid var(--n200); background: #fff; }
-.rail button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0; border-radius: 14px; color: #555; font-size: 11px; font-weight: 500; }
+.rail button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0; border-radius: 14px; color: #55555a; font-size: 12px; font-weight: 500; transition: background .15s, color .15s; }
 .rail button:hover { background: var(--n100); }
 .rail button.on { background: var(--lilac); color: var(--blue); }
 .panel { overflow-y: auto; padding: 22px 20px; border-right: 1px solid var(--n200); background: #fff; }
@@ -86,9 +88,16 @@ canvas:active { cursor: grabbing; }
 canvas.brushing, canvas.brushing:active { cursor: none; }
 .ring { position: absolute; border: 2px solid var(--blue); border-radius: 50%; background: rgba(73, 47, 251, .12); transform: translate(-50%, -50%); pointer-events: none; }
 .tip { color: var(--muted); font-size: 13px; }
+.swap-enter-active, .swap-leave-active { transition: opacity .12s ease-out, transform .12s ease-out; }
+.swap-enter-from, .swap-leave-to { opacity: 0; transform: translateX(-6px); }
+
 @media (max-width: 900px) {
-  .editor { grid-template-columns: 1fr; height: auto; }
-  .rail { flex-direction: row; overflow-x: auto; }
-  .board { width: 100%; height: auto; }
+  /* image first, then the tool strip, then the active panel */
+  .editor { display: flex; flex-direction: column; height: auto; min-height: calc(100vh - 64px); }
+  .work { order: 1; padding: 16px; }
+  .rail { order: 2; flex-direction: row; gap: 4px; overflow-x: auto; padding: 8px; border-top: 1px solid var(--n200); border-right: 0; }
+  .rail button { flex: 0 0 auto; min-width: 76px; padding: 8px 6px; }
+  .panel { order: 3; border-right: 0; border-top: 1px solid var(--n200); }
+  .board { width: 100%; height: auto; max-height: 60vh; }
 }
 </style>

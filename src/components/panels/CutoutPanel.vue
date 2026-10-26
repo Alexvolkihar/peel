@@ -22,7 +22,7 @@ const hint = computed(() => MODELS.find((model) => model.id === modelId.value).h
     <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
   </div>
 
-  <SliderField v-model="scene.cutoutLevel" label="Netteté du détourage" :min="0" :max="100" />
+  <SliderField v-model="scene.cutoutLevel" label="Netteté du détourage" :min="0" :max="100" :format="(v) => `${v} %`" />
 
   <label class="toggle">
     <input v-model="scene.mainSubject.on" type="checkbox" />
