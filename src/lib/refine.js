@@ -10,7 +10,7 @@ const smoothstep = (lo, hi, x) => {
 }
 
 /** Labels 4-connected visible regions; returns the label of each pixel and the size of each region. */
-function labelRegions(alpha, width, height) {
+export function labelRegions(alpha, width, height) {
   const labels = new Int32Array(width * height)
   const sizes = [0]
   const stack = []

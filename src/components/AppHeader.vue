@@ -24,9 +24,8 @@ const inEditor = () => stage.value === 'editor'
         </div>
       </template>
       <template v-else>
-        <nav class="links"><span>Produit</span><span>Formats</span><span>Ressources</span><span>Tarifs</span></nav>
+        <nav class="links"><span>Produit</span><span>Formats</span><span>Ressources</span></nav>
         <div class="cta">
-          <span class="signin">Se connecter</span>
           <label class="btn btn-black">
             Commencer à créer
             <input type="file" accept="image/*" hidden @change="importFile($event.target.files[0])" />
@@ -46,6 +45,5 @@ const inEditor = () => stage.value === 'editor'
 .name { font-size: 22px; font-weight: 600; letter-spacing: -.02em; }
 .links { display: flex; flex: 1; gap: 32px; font-weight: 500; }
 .cta { display: flex; align-items: center; gap: 12px; margin-left: auto; }
-.signin { margin-right: 8px; font-size: 14px; font-weight: 500; }
 .doc { color: var(--muted); font-weight: 500; }
 </style>

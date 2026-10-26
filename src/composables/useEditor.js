@@ -1,8 +1,9 @@
 import { reactive, ref, shallowRef, computed, watch } from 'vue'
-import { removeBackground } from '@imgly/background-removal'
 import { SIZES, EXPORT_FORMATS, CUTOUT_MAX_SIDE, createScene } from '../config'
-import { cropToSubject, downloadBlob, loadImage, loadImageFromFile, toCanvas } from '../lib/image'
+import { cropToSubject, downloadBlob, loadImageFromFile } from '../lib/image'
 import { refineMask } from '../lib/refine'
+import { keepMainSubject } from '../lib/mainSubject'
+import { cutOutSubject } from '../lib/segmentation'
 import { paintScene } from '../lib/render'
 
 // Module-level state: a single editor session, no store library needed.
@@ -10,6 +11,8 @@ const stage = ref('home') // 'home' | 'loading' | 'editor'
 const fileName = ref('image')
 const errorMessage = ref('')
 const progress = reactive({ ratio: 0, label: '' })
+const modelId = ref('rmbg')
+const busy = ref(false) // a (re)cut-out is running
 const scene = reactive(createScene())
 const assets = shallowRef({ original: null, rawCutout: null, cutout: null, bgImage: null })
 
@@ -23,27 +26,39 @@ function setAssets(patch) {
   assets.value = { ...assets.value, ...patch }
 }
 
-function trackProgress(key, current, total) {
-  progress.ratio = total ? current / total : 0
-  progress.label = key.startsWith('fetch') ? 'Téléchargement du modèle (une seule fois)…' : 'Détourage en cours…'
+function refineSubject(rawCutout) {
+  const refined = refineMask(rawCutout, scene.cutoutLevel)
+  const { on, separation } = scene.mainSubject
+  return cropToSubject(on ? keepMainSubject(refined, separation) : refined)
 }
 
-const refineSubject = (rawCutout) => cropToSubject(refineMask(rawCutout, scene.cutoutLevel))
+function trackDownload(ratio) {
+  progress.ratio = ratio
+  progress.label = 'Téléchargement du modèle (une seule fois)…'
+}
+
+async function runCutOut() {
+  busy.value = true
+  progress.ratio = 0
+  progress.label = 'Détourage en cours…'
+  try {
+    const rawCutout = await cutOutSubject(modelId.value, assets.value.original, CUTOUT_MAX_SIDE, trackDownload)
+    setAssets({ rawCutout, cutout: refineSubject(rawCutout) })
+  } finally {
+    busy.value = false
+  }
+}
 
 async function importFile(file) {
   if (!file?.type.startsWith('image/')) return
   errorMessage.value = ''
   fileName.value = file.name.replace(/\.[^.]+$/, '')
   stage.value = 'loading'
-  progress.ratio = 0
-  progress.label = 'Chargement du modèle…'
 
   try {
-    const original = await loadImageFromFile(file)
-    const cutBlob = await removeBackground(file, { progress: trackProgress })
-    const rawCutout = toCanvas(await loadImage(URL.createObjectURL(cutBlob)), CUTOUT_MAX_SIDE)
+    assets.value = { original: await loadImageFromFile(file), rawCutout: null, cutout: null, bgImage: null }
     Object.assign(scene, createScene())
-    assets.value = { original, rawCutout, cutout: refineSubject(rawCutout), bgImage: null }
+    await runCutOut()
     stage.value = 'editor'
   } catch (error) {
     console.error(error)
@@ -71,10 +86,21 @@ function reset() {
   assets.value = { original: null, rawCutout: null, cutout: null, bgImage: null }
 }
 
-watch(() => scene.cutoutLevel, () => {
+watch(() => [scene.cutoutLevel, scene.mainSubject.on, scene.mainSubject.separation], () => {
   if (assets.value.rawCutout) setAssets({ cutout: refineSubject(assets.value.rawCutout) })
 })
 
+watch(modelId, async () => {
+  if (stage.value !== 'editor') return
+  errorMessage.value = ''
+  try {
+    await runCutOut()
+  } catch (error) {
+    console.error(error)
+    errorMessage.value = 'Ce modèle a échoué sur cette image.'
+  }
+})
+
 export function useEditor() {
-  return { stage, fileName, errorMessage, progress, scene, assets, dimensions, importFile, setBackgroundImage, exportImage, reset }
+  return { stage, modelId, busy, fileName, errorMessage, progress, scene, assets, dimensions, importFile, setBackgroundImage, exportImage, reset }
 }
