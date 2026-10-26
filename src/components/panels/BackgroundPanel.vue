@@ -1,5 +1,6 @@
 <script setup>
 import { BG_KINDS, COLORS, GRADIENTS } from '../../config'
+import { SCENES } from '../../lib/scenes'
 import { useEditor } from '../../composables/useEditor'
 import ChipGroup from '../ChipGroup.vue'
 import SliderField from '../SliderField.vue'
@@ -32,6 +33,10 @@ const { scene, setBackgroundImage } = useEditor()
     />
   </div>
 
+  <div v-else-if="scene.bg.kind === 'scene'" class="scenes">
+    <button v-for="item in SCENES" :key="item.id" :class="{ on: scene.bg.scene === item.id }" @click="scene.bg.scene = item.id">{{ item.label }}</button>
+  </div>
+
   <SliderField v-else-if="scene.bg.kind === 'blur'" v-model="scene.bg.blur" label="Intensité du flou" :min="2" :max="80" />
 
   <label v-else-if="scene.bg.kind === 'image'" class="btn btn-ghost full">
@@ -47,4 +52,7 @@ const { scene, setBackgroundImage } = useEditor()
 .custom { position: relative; overflow: hidden; background: conic-gradient(red, yellow, lime, aqua, blue, magenta, red); }
 .custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .full { width: 100%; }
+.scenes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.scenes button { padding: 14px 8px; border: 1px solid var(--n200); border-radius: 14px; background: #fff; font-size: 13px; font-weight: 500; }
+.scenes button.on { border-color: var(--blue); background: var(--lilac); }
 </style>

@@ -1,8 +1,12 @@
 import { BASE_DIMENSION } from '../config'
 import { drawCover } from './image'
+import { findScene } from './scenes'
 
-function paintBackground(ctx, W, H, bg, { original, bgImage, flatten }) {
+function paintBackground(ctx, W, H, bg, box, { original, bgImage, flatten }) {
   switch (bg.kind) {
+    case 'scene':
+      findScene(bg.scene).paint(ctx, W, H, box)
+      break
     case 'color':
       ctx.fillStyle = bg.color
       ctx.fillRect(0, 0, W, H)
@@ -47,13 +51,19 @@ function paintGroundShadow(ctx, { cx, bottom, width }, shadow) {
   ctx.restore()
 }
 
-function paintSubject(ctx, W, H, cutout, subject, shadow) {
+/** Where the subject lands on a W×H canvas (centre, size and bottom edge). */
+function subjectBox(W, H, cutout, subject) {
   const fit = Math.min(W / cutout.width, H / cutout.height) * subject.scale
   const width = cutout.width * fit
   const height = cutout.height * fit
-  const unit = W / BASE_DIMENSION
   const cx = subject.x * W
   const cy = subject.y * H
+  return { cx, cy, width, height, bottom: cy + height / 2 }
+}
+
+function paintSubject(ctx, W, H, cutout, subject, shadow) {
+  const { cx, cy, width, height } = subjectBox(W, H, cutout, subject)
+  const unit = W / BASE_DIMENSION
 
   if (shadow.kind === 'ground') paintGroundShadow(ctx, { cx, bottom: cy + height / 2, width }, shadow)
 
@@ -77,6 +87,7 @@ function paintSubject(ctx, W, H, cutout, subject, shadow) {
  */
 export function paintScene(ctx, { width: W, height: H }, scene, assets, { flatten = false } = {}) {
   ctx.clearRect(0, 0, W, H)
-  paintBackground(ctx, W, H, scene.bg, { ...assets, flatten })
+  const box = assets.cutout ? subjectBox(W, H, assets.cutout, scene.subject) : { cx: W / 2, cy: H / 2, width: 0, height: 0, bottom: H / 2 }
+  paintBackground(ctx, W, H, scene.bg, box, { ...assets, flatten })
   if (assets.cutout) paintSubject(ctx, W, H, assets.cutout, scene.subject, scene.shadow)
 }
