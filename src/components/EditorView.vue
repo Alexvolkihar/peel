@@ -1,7 +1,8 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { TABS } from '../config'
 import { useEditor } from '../composables/useEditor'
+import { useBrush } from '../composables/useBrush'
 import { useSubjectDrag } from '../composables/useSubjectDrag'
 import { paintScene } from '../lib/render'
 import BackgroundPanel from './panels/BackgroundPanel.vue'
@@ -9,13 +10,16 @@ import ShadowPanel from './panels/ShadowPanel.vue'
 import SizePanel from './panels/SizePanel.vue'
 import AdjustPanel from './panels/AdjustPanel.vue'
 import CutoutPanel from './panels/CutoutPanel.vue'
+import BrushPanel from './panels/BrushPanel.vue'
 
-const PANELS = { cutout: CutoutPanel, background: BackgroundPanel, shadow: ShadowPanel, size: SizePanel, adjust: AdjustPanel }
+const PANELS = { cutout: CutoutPanel, brush: BrushPanel, background: BackgroundPanel, shadow: ShadowPanel, size: SizePanel, adjust: AdjustPanel }
 
-const { scene, assets, dimensions, busy, progress } = useEditor()
+const { scene, assets, dimensions, busy, progress, brush } = useEditor()
 const activeTab = ref('cutout')
 const canvas = ref(null)
 const dragHandlers = useSubjectDrag(scene.subject)
+const { ring, handlers: brushHandlers } = useBrush(canvas)
+const handlers = computed(() => (activeTab.value === 'brush' ? brushHandlers : dragHandlers))
 
 function render() {
   const { width, height } = dimensions.value
@@ -41,13 +45,14 @@ watch([scene, assets], render, { deep: true })
 
     <section class="work">
       <div class="board" :style="{ aspectRatio: `${dimensions.width}/${dimensions.height}` }">
-        <canvas ref="canvas" v-on="dragHandlers" />
+        <canvas ref="canvas" :class="{ brushing: activeTab === 'brush' }" v-bind="handlers" />
+        <i v-if="activeTab === 'brush' && ring" class="ring" :style="{ left: `${ring.x}px`, top: `${ring.y}px`, width: `${brush.size * 2}px`, height: `${brush.size * 2}px` }" />
         <div v-if="busy" class="busy">
           <div class="spinner" />
           <p>{{ progress.label }} <template v-if="progress.ratio">{{ Math.round(progress.ratio * 100) }} %</template></p>
         </div>
       </div>
-      <p class="tip">Glisse pour déplacer · molette pour redimensionner</p>
+      <p class="tip">{{ activeTab === 'brush' ? 'Peins sur l’image pour gommer ou restaurer' : 'Glisse pour déplacer · molette pour redimensionner' }}</p>
     </section>
   </main>
 </template>
@@ -67,6 +72,8 @@ watch([scene, assets], render, { deep: true })
 @keyframes spin { to { transform: rotate(360deg); } }
 canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
 canvas:active { cursor: grabbing; }
+canvas.brushing, canvas.brushing:active { cursor: none; }
+.ring { position: absolute; border: 2px solid var(--blue); border-radius: 50%; background: rgba(73, 47, 251, .12); transform: translate(-50%, -50%); pointer-events: none; }
 .tip { color: var(--muted); font-size: 13px; }
 @media (max-width: 900px) {
   .editor { grid-template-columns: 1fr; height: auto; }

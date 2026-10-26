@@ -1,6 +1,7 @@
 import { reactive, ref, shallowRef, computed, watch } from 'vue'
 import { zipSync } from 'fflate'
 import { EXPORT_FORMATS, CUTOUT_MAX_SIDE, createScene } from '../config'
+import { clearEdits, composeCutout, createEdits, paintStroke } from '../lib/brush'
 import { downloadBlob, loadImageFromFile } from '../lib/image'
 import { animateSubject, recordCanvas } from '../lib/animate'
 import { buildCutout, sceneDimensions } from '../lib/pipeline'
@@ -16,7 +17,10 @@ const modelId = ref('rmbg')
 const busy = ref(false) // a (re)cut-out is running
 const batch = reactive({ running: false, done: 0, total: 0 })
 const scene = reactive(createScene())
-const assets = shallowRef({ original: null, rawCutout: null, cutout: null, bgImage: null })
+const brush = reactive({ mode: 'erase', size: 24 }) // size = radius in screen pixels
+const assets = shallowRef({})
+
+const EMPTY_ASSETS = { original: null, rawCutout: null, refined: null, box: null, edits: null, cutout: null, bgImage: null }
 
 const dimensions = computed(() => sceneDimensions(scene, assets.value.original))
 
@@ -24,7 +28,12 @@ function setAssets(patch) {
   assets.value = { ...assets.value, ...patch }
 }
 
-const refineSubject = (rawCutout) => buildCutout(rawCutout, scene)
+/** Rebuilds the subject from the raw mask, keeping the manual brush edits. */
+function rebuildCutout() {
+  const { rawCutout, edits } = assets.value
+  const { refined, box } = buildCutout(rawCutout, scene)
+  setAssets({ refined, box, cutout: composeCutout(refined, edits, box) })
+}
 
 function trackDownload(ratio) {
   progress.ratio = ratio
@@ -37,7 +46,8 @@ async function runCutOut() {
   progress.label = 'Détourage en cours…'
   try {
     const rawCutout = await cutOutSubject(modelId.value, assets.value.original, CUTOUT_MAX_SIDE, trackDownload)
-    setAssets({ rawCutout, cutout: refineSubject(rawCutout) })
+    setAssets({ rawCutout, edits: createEdits(assets.value.original, rawCutout) })
+    rebuildCutout()
   } finally {
     busy.value = false
   }
@@ -50,7 +60,7 @@ async function importFile(file) {
   stage.value = 'loading'
 
   try {
-    assets.value = { original: await loadImageFromFile(file), rawCutout: null, cutout: null, bgImage: null }
+    assets.value = { ...EMPTY_ASSETS, original: await loadImageFromFile(file) }
     Object.assign(scene, createScene())
     await runCutOut()
     stage.value = 'editor'
@@ -102,7 +112,8 @@ async function exportBatch(files, format) {
     for (const file of images) {
       const original = await loadImageFromFile(file)
       const rawCutout = await cutOutSubject(modelId.value, original, CUTOUT_MAX_SIDE, () => {})
-      const blob = await renderToBlob({ original, cutout: refineSubject(rawCutout), bgImage: assets.value.bgImage }, format)
+      const { refined, box } = buildCutout(rawCutout, scene)
+      const blob = await renderToBlob({ original, cutout: composeCutout(refined, null, box), bgImage: assets.value.bgImage }, format)
       const base = file.name.replace(/\.[^.]+$/, '')
       const key = `${base}.${EXPORT_FORMATS[format].ext}`
       entries[key in entries ? `${base}-${batch.done + 1}.${EXPORT_FORMATS[format].ext}` : key] = new Uint8Array(await blob.arrayBuffer())
@@ -116,12 +127,30 @@ async function exportBatch(files, format) {
 
 function reset() {
   stage.value = 'home'
-  assets.value = { original: null, rawCutout: null, cutout: null, bgImage: null }
+  assets.value = EMPTY_ASSETS
 }
 
 watch(() => [scene.cutoutLevel, scene.mainSubject.on, scene.mainSubject.separation], () => {
-  if (assets.value.rawCutout) setAssets({ cutout: refineSubject(assets.value.rawCutout) })
+  if (assets.value.rawCutout) rebuildCutout()
 })
+
+// Brush strokes are painted at once but the (heavier) recomposition runs at most once per frame.
+let recomposeQueued = false
+function brushStroke(from, to, radius) {
+  const { edits, refined, box } = assets.value
+  paintStroke(edits, brush.mode, from, to, radius)
+  if (recomposeQueued) return
+  recomposeQueued = true
+  requestAnimationFrame(() => {
+    recomposeQueued = false
+    setAssets({ cutout: composeCutout(refined, edits, box) })
+  })
+}
+
+function resetBrushEdits() {
+  clearEdits(assets.value.edits)
+  rebuildCutout()
+}
 
 watch(modelId, async () => {
   if (stage.value !== 'editor') return
@@ -136,7 +165,7 @@ watch(modelId, async () => {
 
 export function useEditor() {
   return {
-    stage, modelId, busy, batch, fileName, errorMessage, progress, scene, assets, dimensions,
-    importFile, setBackgroundImage, exportImage, exportAnimation, exportBatch, reset,
+    stage, modelId, busy, batch, brush, fileName, errorMessage, progress, scene, assets, dimensions,
+    importFile, brushStroke, resetBrushEdits, setBackgroundImage, exportImage, exportAnimation, exportBatch, reset,
   }
 }

@@ -37,6 +37,7 @@ export const EXPORT_FORMATS = {
 
 export const TABS = [
   { id: 'cutout', label: 'Détourage', icon: 'M9 4 4 9l5 5M4 9h9a6 6 0 0 1 0 12h-2' },
+  { id: 'brush', label: 'Pinceau', icon: 'M18 3l3 3-9 9-4 1 1-4zM5 19c1.5 0 2-1 2-2' },
   { id: 'background', label: 'Arrière-plan', icon: 'M3 5h18v14H3zM3 15l5-5 5 5 3-3 5 5' },
   { id: 'shadow', label: 'Ombre', icon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 3v18' },
   { id: 'size', label: 'Format', icon: 'M4 4h16v16H4zM9 4v16M4 9h16' },

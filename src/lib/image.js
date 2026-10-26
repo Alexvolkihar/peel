@@ -28,11 +28,10 @@ export function toCanvas(img, maxSide = Infinity) {
   return canvas
 }
 
-/** Crops a transparent-background image to the bounding box of its visible pixels. */
-export function cropToSubject(img) {
-  const source = toCanvas(img)
-  const ctx = source.getContext('2d', { willReadFrequently: true })
-  const { data, width, height } = ctx.getImageData(0, 0, source.width, source.height)
+/** Bounding box of the visible pixels of a canvas (the whole canvas when nothing is visible). */
+export function findSubjectBox(canvas) {
+  const { width, height } = canvas
+  const { data } = canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, width, height)
 
   let minX = width, minY = height, maxX = -1, maxY = -1
   for (let y = 0; y < height; y++) {
@@ -44,10 +43,13 @@ export function cropToSubject(img) {
       maxY = Math.max(maxY, y)
     }
   }
-  if (maxX < 0) return source
+  if (maxX < 0) return { x: 0, y: 0, width, height }
+  return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 }
+}
 
-  const out = createCanvas(maxX - minX + 1, maxY - minY + 1)
-  out.getContext('2d').drawImage(source, minX, minY, out.width, out.height, 0, 0, out.width, out.height)
+export function cropToBox(canvas, box) {
+  const out = createCanvas(box.width, box.height)
+  out.getContext('2d').drawImage(canvas, box.x, box.y, box.width, box.height, 0, 0, box.width, box.height)
   return out
 }
 

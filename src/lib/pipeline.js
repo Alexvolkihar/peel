@@ -1,12 +1,13 @@
 import { SIZES } from '../config'
-import { cropToSubject } from './image'
+import { findSubjectBox } from './image'
 import { keepMainSubject } from './mainSubject'
 import { refineMask } from './refine'
 
-/** Raw model cut-out → cleaned, cropped subject, according to the scene's cut-out settings. */
+/** Raw model cut-out → cleaned mask (full size) and the box around the subject. */
 export function buildCutout(rawCutout, { cutoutLevel, mainSubject }) {
   const refined = refineMask(rawCutout, cutoutLevel)
-  return cropToSubject(mainSubject.on ? keepMainSubject(refined, mainSubject.separation) : refined)
+  const cleaned = mainSubject.on ? keepMainSubject(refined, mainSubject.separation) : refined
+  return { refined: cleaned, box: findSubjectBox(cleaned) }
 }
 
 /** Output size of a scene; "original" follows the source photo. */

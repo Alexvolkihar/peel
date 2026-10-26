@@ -52,7 +52,7 @@ function paintGroundShadow(ctx, { cx, bottom, width }, shadow) {
 }
 
 /** Where the subject lands on a W×H canvas (centre, size and bottom edge). */
-function subjectBox(W, H, cutout, subject) {
+export function subjectBox(W, H, cutout, subject) {
   const fit = Math.min(W / cutout.width, H / cutout.height) * subject.scale
   const width = cutout.width * fit
   const height = cutout.height * fit
