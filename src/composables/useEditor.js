@@ -1,7 +1,7 @@
 import { reactive, ref, shallowRef, computed, watch } from 'vue'
 import { zipSync } from 'fflate'
 import { EXPORT_FORMATS, CUTOUT_MAX_SIDE, createScene } from '../config'
-import { clearEdits, composeCutout, createEdits, paintStroke } from '../lib/brush'
+import { clearEdits, commitStroke, composeCutout, createEdits, paintSegment, redoStroke, undoStroke } from '../lib/brush'
 import { downloadBlob, loadImageFromFile } from '../lib/image'
 import { animateSubject, recordCanvas } from '../lib/animate'
 import { buildCutout, sceneDimensions } from '../lib/pipeline'
@@ -17,7 +17,7 @@ const modelId = ref('rmbg')
 const busy = ref(false) // a (re)cut-out is running
 const batch = reactive({ running: false, done: 0, total: 0 })
 const scene = reactive(createScene())
-const brush = reactive({ mode: 'erase', size: 24 }) // size = radius in screen pixels
+const brush = reactive({ mode: 'erase', size: 24, softness: 40, undoable: 0, redoable: 0 }) // size = radius in screen px, softness 0-100
 const assets = shallowRef({})
 
 const EMPTY_ASSETS = { original: null, rawCutout: null, refined: null, box: null, edits: null, cutout: null, bgImage: null }
@@ -47,6 +47,7 @@ async function runCutOut() {
   try {
     const rawCutout = await cutOutSubject(modelId.value, assets.value.original, CUTOUT_MAX_SIDE, trackDownload)
     setAssets({ rawCutout, edits: createEdits(assets.value.original, rawCutout) })
+    syncBrushHistory()
     rebuildCutout()
   } finally {
     busy.value = false
@@ -134,38 +135,65 @@ watch(() => [scene.cutoutLevel, scene.mainSubject.on, scene.mainSubject.separati
   if (assets.value.rawCutout) rebuildCutout()
 })
 
-// Brush strokes are painted at once but the (heavier) recomposition runs at most once per frame.
+let currentStroke = null
 let recomposeQueued = false
-function brushStroke(from, to, radius) {
-  const { edits, refined, box } = assets.value
-  paintStroke(edits, brush.mode, from, to, radius)
+
+/** Recomposes the cut-out; during a stroke this runs at most once per frame. */
+function recomposeBrush() {
   if (recomposeQueued) return
   recomposeQueued = true
   requestAnimationFrame(() => {
     recomposeQueued = false
-    setAssets({ cutout: composeCutout(refined, edits, box) })
+    const { edits, refined, box } = assets.value
+    if (edits) setAssets({ cutout: composeCutout(refined, edits, box) })
   })
+}
+
+function syncBrushHistory() {
+  const { edits } = assets.value
+  brush.undoable = edits?.strokes.length ?? 0
+  brush.redoable = edits?.undone.length ?? 0
+}
+
+function startBrushStroke() {
+  currentStroke = { mode: brush.mode, softness: brush.softness / 100, segments: [] }
+}
+
+function brushSegment(from, to, radius) {
+  const segment = { from, to, radius }
+  currentStroke.segments.push(segment)
+  paintSegment(assets.value.edits, currentStroke, segment)
+  recomposeBrush()
+}
+
+function endBrushStroke() {
+  if (!currentStroke) return
+  commitStroke(assets.value.edits, currentStroke)
+  currentStroke = null
+  syncBrushHistory()
+}
+
+function undoBrush() {
+  undoStroke(assets.value.edits)
+  syncBrushHistory()
+  recomposeBrush()
+}
+
+function redoBrush() {
+  redoStroke(assets.value.edits)
+  syncBrushHistory()
+  recomposeBrush()
 }
 
 function resetBrushEdits() {
   clearEdits(assets.value.edits)
-  rebuildCutout()
+  syncBrushHistory()
+  recomposeBrush()
 }
-
-watch(modelId, async () => {
-  if (stage.value !== 'editor') return
-  errorMessage.value = ''
-  try {
-    await runCutOut()
-  } catch (error) {
-    console.error(error)
-    errorMessage.value = 'Ce modèle a échoué sur cette image.'
-  }
-})
 
 export function useEditor() {
   return {
     stage, modelId, busy, batch, brush, fileName, errorMessage, progress, scene, assets, dimensions,
-    importFile, brushStroke, resetBrushEdits, setBackgroundImage, exportImage, exportAnimation, exportBatch, reset,
+    importFile, startBrushStroke, brushSegment, endBrushStroke, undoBrush, redoBrush, resetBrushEdits, setBackgroundImage, exportImage, exportAnimation, exportBatch, reset,
   }
 }

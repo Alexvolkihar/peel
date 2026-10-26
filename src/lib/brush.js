@@ -13,14 +13,21 @@ export function createEdits(original, { width, height }) {
     keep: createCanvas(width, height),
     layer: createCanvas(width, height), // scratch canvases reused by composeCutout
     work: createCanvas(width, height),
+    strokes: [], // history: each stroke is { mode, softness, segments: [{ from, to, radius }] }
+    undone: [],
   }
 }
 
-function drawLine(canvas, operation, from, to, radius) {
+const SOFT_BLUR_RATIO = 0.35 // blur radius at softness 1, relative to the brush radius
+const BLUR_REACH = 1.5 // the blur spreads this many radii beyond the line, so the line is shrunk to compensate
+
+function drawLine(canvas, operation, from, to, radius, softness) {
   const ctx = canvas.getContext('2d')
+  const blur = radius * SOFT_BLUR_RATIO * softness
   ctx.globalCompositeOperation = operation
+  ctx.filter = blur > 0 ? `blur(${blur}px)` : 'none'
   ctx.lineCap = 'round'
-  ctx.lineWidth = radius * 2
+  ctx.lineWidth = Math.max(1, 2 * (radius - BLUR_REACH * blur))
   ctx.strokeStyle = '#000'
   ctx.beginPath()
   ctx.moveTo(from.x, from.y)
@@ -29,14 +36,43 @@ function drawLine(canvas, operation, from, to, radius) {
 }
 
 /** A stroke adds to one layer and removes from the other, so the last stroke always wins. */
-export function paintStroke(edits, mode, from, to, radius) {
+export function paintSegment(edits, { mode, softness }, { from, to, radius }) {
   const [target, other] = mode === 'erase' ? [edits.erase, edits.keep] : [edits.keep, edits.erase]
-  drawLine(target, 'source-over', from, to, radius)
-  drawLine(other, 'destination-out', from, to, radius)
+  drawLine(target, 'source-over', from, to, radius, softness)
+  drawLine(other, 'destination-out', from, to, radius, softness)
+}
+
+function clearLayers(edits) {
+  for (const layer of [edits.erase, edits.keep]) layer.getContext('2d').clearRect(0, 0, layer.width, layer.height)
+}
+
+function replay(edits) {
+  clearLayers(edits)
+  edits.strokes.forEach((stroke) => stroke.segments.forEach((segment) => paintSegment(edits, stroke, segment)))
+}
+
+/** Records a finished stroke; a new stroke invalidates what was undone. */
+export function commitStroke(edits, stroke) {
+  edits.strokes.push(stroke)
+  edits.undone.length = 0
+}
+
+export function undoStroke(edits) {
+  if (!edits.strokes.length) return
+  edits.undone.push(edits.strokes.pop())
+  replay(edits)
+}
+
+export function redoStroke(edits) {
+  if (!edits.undone.length) return
+  edits.strokes.push(edits.undone.pop())
+  replay(edits)
 }
 
 export function clearEdits(edits) {
-  for (const layer of [edits.erase, edits.keep]) layer.getContext('2d').clearRect(0, 0, layer.width, layer.height)
+  edits.strokes.length = 0
+  edits.undone.length = 0
+  clearLayers(edits)
 }
 
 /** Cleaned cut-out + manual edits, cropped to `box`. */

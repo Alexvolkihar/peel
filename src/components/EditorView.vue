@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch, onMounted } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { TABS } from '../config'
 import { useEditor } from '../composables/useEditor'
 import { useBrush } from '../composables/useBrush'
@@ -14,7 +14,7 @@ import BrushPanel from './panels/BrushPanel.vue'
 
 const PANELS = { cutout: CutoutPanel, brush: BrushPanel, background: BackgroundPanel, shadow: ShadowPanel, size: SizePanel, adjust: AdjustPanel }
 
-const { scene, assets, dimensions, busy, progress, brush } = useEditor()
+const { scene, assets, dimensions, busy, progress, brush, undoBrush, redoBrush } = useEditor()
 const activeTab = ref('cutout')
 const canvas = ref(null)
 const dragHandlers = useSubjectDrag(scene.subject)
@@ -28,7 +28,18 @@ function render() {
   paintScene(canvas.value.getContext('2d'), dimensions.value, scene, assets.value)
 }
 
-onMounted(render)
+function onKeydown(event) {
+  if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'z') return
+  event.preventDefault()
+  if (event.shiftKey) redoBrush()
+  else undoBrush()
+}
+
+onMounted(() => {
+  render()
+  window.addEventListener('keydown', onKeydown)
+})
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 watch([scene, assets], render, { deep: true })
 </script>
 

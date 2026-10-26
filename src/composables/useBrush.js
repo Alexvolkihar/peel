@@ -4,7 +4,7 @@ import { useEditor } from './useEditor'
 
 /** Pointer handlers that erase/restore parts of the subject, plus the cursor ring to display. */
 export function useBrush(canvas) {
-  const { scene, assets, brush, brushStroke } = useEditor()
+  const { scene, assets, brush, startBrushStroke, brushSegment, endBrushStroke } = useEditor()
   const ring = ref(null) // { x, y } in CSS pixels, relative to the canvas
   let last = null
 
@@ -39,17 +39,19 @@ export function useBrush(canvas) {
         canvas.value.setPointerCapture(event.pointerId)
         const { point, radius } = toCutoutPixel(event)
         last = point
-        brushStroke(point, point, radius)
+        startBrushStroke()
+        brushSegment(point, point, radius)
       },
       onPointermove(event) {
         track(event)
         if (!last) return
         const { point, radius } = toCutoutPixel(event)
-        brushStroke(last, point, radius)
+        brushSegment(last, point, radius)
         last = point
       },
       onPointerup() {
         last = null
+        endBrushStroke()
       },
       onPointerleave() {
         ring.value = null
