@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #f5f4f0; font-family: 'Inter', sans-serif; color: #0f1011; }
+  .scene { position: absolute; inset: 0; display: none; overflow: hidden; }
+  .shot { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform; }
+  .pill { position: absolute; left: 96px; bottom: 96px; padding: 22px 40px; border-radius: 999px; background: #0f1011; color: #fff; font-size: 46px; font-weight: 500; letter-spacing: -.01em; box-shadow: 0 16px 40px rgba(15,16,17,.28); white-space: nowrap; }
+  .tag { position: absolute; left: 96px; bottom: 208px; padding: 10px 24px; border-radius: 999px; background: #e5ed49; color: #0f1011; font-size: 30px; font-weight: 600; }
+  .brand { position: absolute; left: 96px; top: 72px; display: flex; align-items: center; gap: 18px; font-size: 44px; font-weight: 600; letter-spacing: -.02em; }
+  .logo { display: grid; place-items: center; width: 64px; height: 64px; border-radius: 18px; background: linear-gradient(135deg, #7146ff, #492ffb); }
+  #hook .line { position: absolute; left: 96px; font-size: 230px; line-height: 1; letter-spacing: -.035em; white-space: nowrap; }
+  #hook .one { top: 250px; font-weight: 300; }
+  #hook .two { top: 500px; font-weight: 500; }
+  #hook .mark { position: absolute; left: 80px; top: 540px; width: 1120px; height: 190px; background: #e5ed49; transform-origin: 0 50%; z-index: 0; }
+  #hook .two { z-index: 1; }
+  #outro { background: #492ffb; color: #fff; }
+  #outro .center { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 28px; }
+  #outro .big { width: 190px; height: 190px; border-radius: 52px; background: #fff; display: grid; place-items: center; }
+  #outro h2 { margin: 0; font-size: 170px; font-weight: 500; letter-spacing: -.035em; line-height: 1; }
+  #outro p { margin: 0; font-size: 56px; font-weight: 400; color: #ebe8ff; }
+  #outro small { position: absolute; bottom: 56px; left: 0; right: 0; text-align: center; font-size: 28px; color: rgba(255,255,255,.7); }
+</style>
+</head>
+<body>
+<div class="scene" id="hook">
+  <div class="brand"><span class="logo"><svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20V5h6a4 4 0 0 1 0 8H7M12 13l5 7"/></svg></span>Atelier</div>
+  <div class="mark"></div>
+  <div class="line one">Le fond ?</div>
+  <div class="line two">Disparu.</div>
+</div>
+
+<div class="scene" id="detour"><img class="shot" src="../../screenshots/editor-cutout.png" /><div class="pill">Détourage IA, 100 % local</div></div>
+<div class="scene" id="scenes">
+  <img class="shot" id="s-podium" src="../../screenshots/scene-podium.png" /><img class="shot" id="s-studio" src="../../screenshots/scene-studio.png" /><img class="shot" id="s-gradient" src="../../screenshots/gradient.png" />
+  <div class="tag" id="scene-tag"></div><div class="pill">Scènes, fonds et ombres</div>
+</div>
+<div class="scene" id="brush"><img class="shot" src="../../screenshots/brush.png" /><div class="pill">Pinceau : gommer, restaurer, ⌘Z</div></div>
+<div class="scene" id="export"><img class="shot" src="../../screenshots/export.png" /><div class="pill">PNG, vidéo WebM, lots en ZIP</div></div>
+
+<div class="scene" id="outro">
+  <div class="center" id="outro-center">
+    <div class="big"><svg viewBox="0 0 24 24" width="110" height="110" fill="none" stroke="#492ffb" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 20V5h6a4 4 0 0 1 0 8H7M12 13l5 7"/></svg></div>
+    <h2>Atelier</h2>
+    <p>Gratuit. Local. Sans compte.</p>
+  </div>
+  <small>Photo : The DK Photography · Unsplash</small>
+</div>
+
+<script>
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v))
+const easeOut = (x) => (x >= 1 ? 1 : 1 - 2 ** (-10 * x))
+const lerp = (a, b, k) => a + (b - a) * k
+const el = (id) => document.getElementById(id)
+
+// Cuts sit on the 120 BPM grid (0.5 s beats).
+const SCENES = [
+  { id: 'hook', from: 0, to: 3 },
+  { id: 'detour', from: 3, to: 7 },
+  { id: 'scenes', from: 7, to: 11 },
+  { id: 'brush', from: 11, to: 14.5 },
+  { id: 'export', from: 14.5, to: 18 },
+  { id: 'outro', from: 18, to: 21 },
+]
+
+/** Camera as a window onto the 1920x1080 screenshot: x0, y0, width (height follows 16:9). */
+function camera(node, k, a, b) {
+  const x0 = lerp(a.x0, b.x0, k), y0 = lerp(a.y0, b.y0, k), w = lerp(a.w, b.w, k)
+  const s = 1920 / w
+  node.style.transform = `translate(${-x0 * s}px, ${-y0 * s}px) scale(${s})`
+}
+
+/** Entry animation shared by every UI scene: rise + fade, then the caption slides up after it. */
+function enter(scene, local) {
+  const k = easeOut(local / 0.45)
+  scene.style.opacity = clamp(local / 0.2)
+  scene.style.transform = `translateY(${(1 - k) * 28}px)`
+  const pill = scene.querySelector('.pill')
+  if (pill) { const p = easeOut((local - 0.35) / 0.55); pill.style.opacity = clamp((local - 0.35) / 0.3); pill.style.transform = `translateY(${(1 - p) * 50}px)` }
+}
+
+const FULL = { x0: 0, y0: 0, w: 1920 }
+
+const draw = {
+  hook(local) {
+    const one = document.querySelector('#hook .one'), two = document.querySelector('#hook .two'), mark = document.querySelector('#hook .mark')
+    const a = easeOut((local - 0.15) / 0.7), b = easeOut((local - 1.0) / 0.7), m = easeOut((local - 1.25) / 0.6)
+    one.style.opacity = clamp((local - 0.15) / 0.3); one.style.transform = `translateY(${(1 - a) * 60}px)`
+    two.style.opacity = clamp((local - 1.0) / 0.3); two.style.transform = `translateY(${(1 - b) * 60}px)`
+    mark.style.transform = `scaleX(${m})`
+  },
+  detour(local) { const s = el('detour'); enter(s, local); camera(s.querySelector('.shot'), easeOut(local / 3.8), FULL, { x0: 520, y0: 140, w: 1280 }) },
+  scenes(local) {
+    const s = el('scenes'); enter(s, local)
+    const shots = [['s-podium', 0, 1.5, 'Podium'], ['s-studio', 1.5, 3, 'Studio'], ['s-gradient', 3, 4, 'Dégradé']]
+    for (const [id, a, b, label] of shots) {
+      const on = local >= a && local < b
+      el(id).style.display = on ? 'block' : 'none'
+      if (on) { camera(el(id), easeOut((local - a) / (b - a)), { x0: 410, y0: 150, w: 1510 }, { x0: 440, y0: 190, w: 1440 }); el('scene-tag').textContent = label }
+    }
+    const tag = el('scene-tag'); tag.style.opacity = clamp((local - 0.2) / 0.2)
+  },
+  brush(local) { const s = el('brush'); enter(s, local); camera(s.querySelector('.shot'), easeOut(local / 3.2), FULL, { x0: 0, y0: 60, w: 1500 }) },
+  export(local) { const s = el('export'); enter(s, local); camera(s.querySelector('.shot'), easeOut(local / 3.2), FULL, { x0: 920, y0: 0, w: 1000 }) },
+  outro(local) {
+    const c = el('outro-center'), k = easeOut(local / 0.6)
+    c.style.opacity = clamp(local / 0.25); c.style.transform = `scale(${lerp(0.92, 1, k)})`
+    document.querySelector('#outro small').style.opacity = clamp((local - 0.6) / 0.4)
+    el('outro').style.opacity = 1 - clamp((local - 2.5) / 0.5) * 0.0
+    document.body.style.background = '#492ffb'
+  },
+}
+
+window.render = (t) => {
+  document.body.style.background = '#f5f4f0'
+  for (const scene of SCENES) {
+    const node = el(scene.id)
+    const on = t >= scene.from && t < scene.to
+    node.style.display = on ? 'block' : 'none'
+    if (on) draw[scene.id](t - scene.from)
+  }
+  // closing fade to ink over the last 0.5 s
+  const fade = clamp((t - 20.5) / 0.5)
+  document.documentElement.style.filter = fade ? `brightness(${1 - fade})` : 'none'
+}
+
+window.ready = Promise.all([document.fonts.ready, ...[...document.images].map((img) => img.decode())])
+</script>
+</body>
+</html>

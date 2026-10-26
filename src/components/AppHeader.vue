@@ -42,6 +42,7 @@ const { stage, fileName, importFile, reset } = useEditor()
 .brand { display: flex; align-items: center; gap: 10px; border-radius: 12px; color: inherit; text-decoration: none; }
 .logo { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg, var(--purple), var(--blue)); }
 .name { font-size: 22px; font-weight: 600; letter-spacing: -.02em; }
+.nav.compact .inner { max-width: none; padding: 0 20px; } /* editor: header spans the full width like the tool rail */
 .cta { display: flex; align-items: center; gap: 12px; margin-left: auto; }
 .doc { min-width: 0; overflow: hidden; color: var(--muted); font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 640px) {
